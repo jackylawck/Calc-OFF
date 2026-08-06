@@ -39,7 +39,6 @@ async function checkSecret(input) {
     }
 }
 
-// 徹底解決：字串清洗式安全驗證，完全消除 Regex 語法漏洞
 function safeEvaluate(mathExpr) {
     const cleaned = mathExpr
         .replace(/Math\.(sin|cos|tan|log10|log|sqrt|PI)/g, '')
@@ -67,7 +66,6 @@ window.calculate = async function() {
     try {
         let parsed = expr;
 
-        // 1. 替換乘除與科學運算符號
         parsed = parsed
             .replace(/×/gi, '*')
             .replace(/÷/gi, '/')
@@ -81,11 +79,9 @@ window.calculate = async function() {
             .replace(/√\(/g, 'Math.sqrt(')
             .replace(/\^/g, '**');
 
-        // 2. 自動補全省略的乘號 (例: 9Math.PI -> 9*Math.PI, 9( -> 9*()
         parsed = parsed.replace(/(\d)(Math\.|\()/g, '$1*$2');
         parsed = parsed.replace(/(\))(\d|Math\.)/g, '$1*$2');
 
-        // 3. 自動補齊未封閉的括號
         let openBrackets = (parsed.match(/\(/g) || []).length;
         let closeBrackets = (parsed.match(/\)/g) || []).length;
         while (openBrackets > closeBrackets) {
@@ -93,7 +89,6 @@ window.calculate = async function() {
             openBrackets--;
         }
 
-        // 4. 安全計算
         let res = safeEvaluate(parsed);
 
         if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
