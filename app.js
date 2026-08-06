@@ -1,53 +1,178 @@
-const CACHE_NAME = 'calcoff-v10';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js?v=10',
-  './manifest.json',
-  './CalcOFFicon-192.png',
-  './CalcOFFicon-512.png'
-];
+let expr = "";
+let ramVault = [];
+let idleTimer = null;
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
-  );
+const SECRET_HASH = "8f31920ef1e83f06850d536c4b9b736b1d402e60472e3a0937b8d147413d8a57";
+const IDLE_TIMEOUT = 5 * 60 * 1000;
+
+function vibrate() {
+    if (navigator.vibrate) navigator.vibrate(10);
+}
+
+function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    if (document.getElementById('vault-modal') && document.getElementById('vault-modal').style.display === 'block') {
+        idleTimer = setTimeout(() => {
+            purgeAndClose();
+        }, IDLE_TIMEOUT);
+    }
+}
+
+function updateLCD(val) {
+    document.getElementById('lcd-val').innerText = val || expr || "0";
+    document.getElementById('lcd-hist').innerText = expr ? "DEG  " + expr : "DEG";
+}
+
+window.inputNum = function(n) { resetIdleTimer(); vibrate(); expr += n; updateLCD(); };
+window.inputFn = function(fn) { resetIdleTimer(); vibrate(); expr += fn; updateLCD(); };
+window.clearScreen = function() { resetIdleTimer(); vibrate(); expr = ""; updateLCD("0"); };
+window.deleteLast = function() { resetIdleTimer(); vibrate(); expr = expr.slice(0, -1); updateLCD(expr || "0"); };
+
+async function checkSecret(input) {
+    try {
+        const enc = new TextEncoder();
+        const hash = await crypto.subtle.digest('SHA-256', enc.encode(input));
+        const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        return hex === SECRET_HASH;
+    } catch (e) {
+        return false;
+    }
+}
+
+// 安全數學表達式求值器 (白名單識別字檢查)
+function safeEvaluate(mathExpr) {
+    const allowedWords = new Set(['Math', 'sin', 'cos', 'tan', 'log10', 'log', 'sqrt', 'PI']);
+    const words = mathExpr.match(/[a-zA-Z_$][a-zA-Z0-9_$]*/g) || [];
+    
+    for (let word of words) {
+        if (!allowedWords.has(word)) {
+            throw new Error('Unsafe identifier: ' + word);
+        }
+    }
+    return Function('"use strict"; return (' + mathExpr + ')')();
+}
+
+window.calculate = async function() {
+    resetIdleTimer();
+    vibrate();
+    
+    // 1. 驗證解鎖暗號 (3650)
+    if (await checkSecret(expr)) {
+        document.getElementById('vault-modal').style.display = 'block';
+        clearScreen();
+        resetIdleTimer();
+        return;
+    }
+
+    if (!expr) return;
+
+    try {
+        let parsed = expr;
+
+        // 2. 在轉換前補全省略乘號 (避開 Math.log10 的 0 誤判)
+        parsed = parsed.replace(/(\d)(\()/g, '$1*(');
+        parsed = parsed.replace(/(\d)(sin|cos|tan|log|ln|√|π)/g, '$1*$2');
+        parsed = parsed.replace(/(\))(\d|sin|cos|tan|log|ln|√|π|\()/g, '$1*$2');
+
+        // 3. 轉換科學計算符號為 JavaScript 語法
+        parsed = parsed
+            .replace(/×/g, '*')
+            .replace(/÷/g, '/')
+            .replace(/π/g, 'Math.PI')
+            .replace(/sin\(/g, 'Math.sin((Math.PI/180)*')
+            .replace(/cos\(/g, 'Math.cos((Math.PI/180)*')
+            .replace(/tan\(/g, 'Math.tan((Math.PI/180)*')
+            .replace(/log\(/g, 'Math.log10(')
+            .replace(/ln\(/g, 'Math.log(')
+            .replace(/√\(/g, 'Math.sqrt(')
+            .replace(/\^/g, '**');
+
+        // 4. 自動補齊未關閉的括號
+        let openBrackets = (parsed.match(/\(/g) || []).length;
+        let closeBrackets = (parsed.match(/\)/g) || []).length;
+        while (openBrackets > closeBrackets) {
+            parsed += ')';
+            openBrackets--;
+        }
+
+        // 5. 執行安全計算
+        let res = safeEvaluate(parsed);
+
+        if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
+            res = Math.round(res * 1e10) / 1e10; // 消除浮點數微小誤差
+        } else {
+            throw new Error("Invalid result");
+        }
+
+        document.getElementById('lcd-hist').innerText = "Ans = " + expr;
+        expr = res.toString();
+        updateLCD(expr);
+    } catch (e) {
+        console.error(e);
+        updateLCD("Error");
+        expr = "";
+    }
+};
+
+window.unlockVault = function() {
+    resetIdleTimer();
+    vibrate();
+    if (!document.getElementById('session-key').value) return;
+    document.getElementById('auth-box').style.display = 'none';
+    document.getElementById('content-box').style.display = 'block';
+};
+
+window.addEntry = function() {
+    resetIdleTimer();
+    vibrate();
+    const title = document.getElementById('note-title').value;
+    const val = document.getElementById('note-val').value;
+    if (!title || !val) return;
+    ramVault.push({ title, val });
+    document.getElementById('note-title').value = '';
+    document.getElementById('note-val').value = '';
+    renderList();
+};
+
+function renderList() {
+    const container = document.getElementById('vault-list');
+    container.innerHTML = '';
+    ramVault.forEach(item => {
+        const div = document.createElement('div');
+        div.style.cssText = "background:#1e293b; padding:8px; margin-top:6px; border-radius:4px;";
+        div.innerHTML = `<strong>${item.title}:</strong> <code>${item.val}</code>`;
+        container.appendChild(div);
+    });
+}
+
+window.purgeAndClose = function() {
+    clearTimeout(idleTimer);
+    ramVault.forEach(item => { item.title = "00000"; item.val = "00000"; });
+    ramVault = [];
+    if (document.getElementById('session-key')) document.getElementById('session-key').value = '';
+    if (document.getElementById('vault-list')) document.getElementById('vault-list').innerHTML = '';
+    if (document.getElementById('content-box')) document.getElementById('content-box').style.display = 'none';
+    if (document.getElementById('auth-box')) document.getElementById('auth-box').style.display = 'block';
+    if (document.getElementById('vault-modal')) document.getElementById('vault-modal').style.display = 'none';
+};
+
+['click', 'keydown', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetIdleTimer);
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        purgeAndClose();
+    }
 });
 
-// 對 app.js 採取網絡優先 (Network-First)，防止 iOS 離線快取鎖死舊程式碼
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('app.js')) {
-    event.respondWith(
-      fetch(event.request).then((networkResponse) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
-      }).catch(() => caches.match(event.request))
-    );
-    return;
-  }
+window.addEventListener('beforeunload', purgeAndClose);
+window.addEventListener('pagehide', purgeAndClose);
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    })
-  );
-});
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.update();
+        }).catch(err => console.log('SW Registration Failed:', err));
+    });
+}
