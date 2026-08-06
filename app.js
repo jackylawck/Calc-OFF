@@ -39,15 +39,19 @@ async function checkSecret(input) {
     }
 }
 
-// 徹底修復：穩健且絕對安全的數學表達式求值器
+// 🔧 終極修正：白名單單詞提取驗證法 (絕不誤殺 log10, sin, cos, tan, ln, sqrt, PI)
 function safeEvaluate(mathExpr) {
-    // 嚴格阻擋潛在危險字元 (字母只能出現 Math, sin, cos, tan, log10, log, sqrt, PI)
-    const sanitized = mathExpr.replace(/Math\.(sin|cos|tan|log10|log|sqrt|PI)/g, '');
-    if (/[a-zA-Z_$]/.test(sanitized)) {
-        throw new Error('Unsafe Identifier');
+    // 提取所有連續字母 (識別字)
+    const words = mathExpr.match(/[a-zA-Z_$][a-zA-Z0-9_$]*/g) || [];
+    const allowedWords = ['Math', 'sin', 'cos', 'tan', 'log10', 'log', 'sqrt', 'PI'];
+
+    // 只要出現非白名單的識別字（例如 window, document, fetch, eval 等），一律阻擋
+    for (let word of words) {
+        if (!allowedWords.includes(word)) {
+            throw new Error('Unsafe Identifier: ' + word);
+        }
     }
-    
-    // 安全執行數學表達式
+
     return Function('"use strict"; return (' + mathExpr + ')')();
 }
 
@@ -94,11 +98,11 @@ window.calculate = async function() {
             openBrackets--;
         }
 
-        // 5. 執行求值
+        // 5. 執行安全求值
         let res = safeEvaluate(parsed);
 
         if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
-            res = Math.round(res * 1e10) / 1e10; // 消除 JS 浮點數微小誤差
+            res = Math.round(res * 1e10) / 1e10; // 消除 JS 浮點數精度誤差
         } else {
             throw new Error("Invalid result");
         }
