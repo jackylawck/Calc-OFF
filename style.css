@@ -1,0 +1,133 @@
+:root { 
+    --bg: #0f172a; 
+    --calc-body: #1e293b; 
+    --screen-bg: #94a3b8; 
+    --text-dark: #0f172a; 
+    --btn-fn: #334155; 
+    --btn-num: #0f172a; 
+    --accent: #0284c7; 
+    --danger: #dc2626; 
+}
+
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; 
+    background: var(--bg); 
+    color: #fff; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
+    margin: 0; 
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.calculator { 
+    background: var(--calc-body); 
+    width: 340px; 
+    padding: 24px 20px; 
+    border-radius: 16px; 
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6); 
+    border: 1px solid #475569; 
+}
+
+.brand-header { 
+    text-align: center; 
+    font-size: 0.75rem; 
+    color: #94a3b8; 
+    margin-bottom: 12px; 
+    letter-spacing: 1.5px; 
+    font-weight: bold;
+}
+
+.lcd-screen { 
+    background: var(--screen-bg); 
+    color: var(--text-dark); 
+    padding: 10px; 
+    border-radius: 6px; 
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); 
+    margin-bottom: 16px; 
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold; 
+}
+
+.lcd-history { 
+    font-size: 0.85rem; 
+    height: 18px; 
+    text-align: right; 
+    overflow: hidden; 
+    opacity: 0.75; 
+}
+
+.lcd-main { 
+    font-size: 1.6rem; 
+    text-align: right; 
+    height: 32px; 
+    overflow: hidden; 
+}
+
+.grid-fn { 
+    display: grid; 
+    grid-template-columns: repeat(5, 1fr); 
+    gap: 6px; 
+    margin-bottom: 10px; 
+}
+
+.grid-num { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 8px; 
+}
+
+button { 
+    height: 42px; 
+    border-radius: 6px; 
+    border: 1px solid #0f172a; 
+    font-size: 0.9rem; 
+    font-weight: bold; 
+    cursor: pointer; 
+    color: #fff; 
+    background: var(--btn-fn); 
+    transition: background 0.1s, transform 0.05s, box-shadow 0.1s;
+}
+
+button.num { background: var(--btn-num); }
+button.op { background: var(--accent); }
+button.danger { background: var(--danger); }
+
+button:active { 
+    filter: brightness(1.2); 
+    transform: scale(0.95); 
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+#vault-modal { 
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(0,0,0,0.85); 
+    padding: 20px; 
+    z-index: 999; 
+}
+
+.vault-box { 
+    max-width: 380px; 
+    margin: 40px auto; 
+    background: #0f172a; 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 1px solid #38bdf8; 
+}
+
+input { 
+    width: 100%; 
+    padding: 10px; 
+    margin: 8px 0; 
+    background: #1e293b; 
+    border: 1px solid #334155; 
+    color: #fff; 
+    border-radius: 6px; 
+    box-sizing: border-box; 
+    user-select: text;
+    -webkit-user-select: text;
+}
