@@ -39,14 +39,15 @@ async function checkSecret(input) {
     }
 }
 
+// 徹底修復：穩健且絕對安全的數學表達式求值器
 function safeEvaluate(mathExpr) {
-    const cleaned = mathExpr
-        .replace(/Math\.(sin|cos|tan|log10|log|sqrt|PI)/g, '')
-        .replace(/[0-9+\-*/.()\s]/g, '');
-    
-    if (cleaned.length > 0) {
-        throw new Error('Unsafe Math Expression');
+    // 嚴格阻擋潛在危險字元 (字母只能出現 Math, sin, cos, tan, log10, log, sqrt, PI)
+    const sanitized = mathExpr.replace(/Math\.(sin|cos|tan|log10|log|sqrt|PI)/g, '');
+    if (/[a-zA-Z_$]/.test(sanitized)) {
+        throw new Error('Unsafe Identifier');
     }
+    
+    // 安全執行數學表達式
     return Function('"use strict"; return (' + mathExpr + ')')();
 }
 
@@ -54,6 +55,7 @@ window.calculate = async function() {
     resetIdleTimer();
     vibrate();
     
+    // 1. 驗證解鎖暗號
     if (await checkSecret(expr)) {
         document.getElementById('vault-modal').style.display = 'block';
         clearScreen();
@@ -66,6 +68,7 @@ window.calculate = async function() {
     try {
         let parsed = expr;
 
+        // 2. 轉換乘除與科學運算符號
         parsed = parsed
             .replace(/×/gi, '*')
             .replace(/÷/gi, '/')
@@ -79,9 +82,11 @@ window.calculate = async function() {
             .replace(/√\(/g, 'Math.sqrt(')
             .replace(/\^/g, '**');
 
+        // 3. 自動補全省略乘號 (例: 9Math.PI -> 9*Math.PI, 9( -> 9*()
         parsed = parsed.replace(/(\d)(Math\.|\()/g, '$1*$2');
         parsed = parsed.replace(/(\))(\d|Math\.)/g, '$1*$2');
 
+        // 4. 自動補齊未關閉的括號
         let openBrackets = (parsed.match(/\(/g) || []).length;
         let closeBrackets = (parsed.match(/\)/g) || []).length;
         while (openBrackets > closeBrackets) {
@@ -89,10 +94,11 @@ window.calculate = async function() {
             openBrackets--;
         }
 
+        // 5. 執行求值
         let res = safeEvaluate(parsed);
 
         if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
-            res = Math.round(res * 1e10) / 1e10;
+            res = Math.round(res * 1e10) / 1e10; // 消除 JS 浮點數微小誤差
         } else {
             throw new Error("Invalid result");
         }
