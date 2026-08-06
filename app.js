@@ -2,8 +2,9 @@ let expr = "";
 let ramVault = [];
 let idleTimer = null;
 
+// 暗號 SHA-256 雜湊 (對應 "3650" 的 SHA-256)
 const SECRET_HASH = "8f31920ef1e83f06850d536c4b9b736b1d402e60472e3a0937b8d147413d8a57";
-const IDLE_TIMEOUT = 5 * 60 * 1000;
+const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 分鐘無操作自動鎖定
 
 function vibrate() {
     if (navigator.vibrate) navigator.vibrate(10);
@@ -23,7 +24,7 @@ function updateLCD(val) {
     document.getElementById('lcd-hist').innerText = expr ? "DEG  " + expr : "DEG";
 }
 
-// 直接用函數處理按鈕輸入（兼容 onclick 方式）
+// 顯式掛載至 window 作用域，完全相容 index.html 的 inline onclick 觸發
 window.inputNum = function(n) { 
     resetIdleTimer(); 
     vibrate(); 
@@ -59,11 +60,10 @@ async function checkSecret(input) {
     return hex === SECRET_HASH;
 }
 
-// 🔧 修正：正確嘅安全評估函數
+// 🔧 核心修正：採用「危險字元黑名單阻擋」驗證數學表達式
 function safeEvaluate(mathExpr) {
-    // 只容許：數字、基本運算符、括號、Math 物件、空白
-    // 用兩個步驟：先檢查危險字符，再執行
-    const dangerous = /[^0-9+\-*/.()Math.PI Math.sin Math.cos Math.tan Math.log10 Math.log Math.sqrt \s]/;
+    // 檢查是否包含非數學運算的非法/危險字符 (防範 JavaScript 程式碼注入)
+    const dangerous = /[^0-9+\-*/.()\sMath\.PI Math\.sin Math\.cos Math\.tan Math\.log10 Math\.log Math\.sqrt]/;
     if (dangerous.test(mathExpr)) {
         throw new Error('Unsafe Math Expression');
     }
@@ -74,7 +74,7 @@ window.calculate = async function() {
     resetIdleTimer();
     vibrate();
     
-    // 檢查暗號
+    // 1. 驗證暗號
     if (await checkSecret(expr)) {
         document.getElementById('vault-modal').style.display = 'block';
         clearScreen();
@@ -85,11 +85,12 @@ window.calculate = async function() {
     if (!expr) return;
 
     try {
+        // 2. 將界面符號轉為 JS 內部表達式
         let parsed = expr
             .replace(/×/g, '*')
             .replace(/÷/g, '/')
             .replace(/π/g, 'Math.PI')
-            .replace(/sin\(/g, 'Math.sin(')
+            .replace(/sin\(/g, '(Math.PI/180)*Math.sin(') // 轉為 Degree 角度運算
             .replace(/cos\(/g, 'Math.cos(')
             .replace(/tan\(/g, 'Math.tan(')
             .replace(/log\(/g, 'Math.log10(')
@@ -100,13 +101,14 @@ window.calculate = async function() {
         let res = safeEvaluate(parsed);
 
         if (typeof res === 'number' && !isNaN(res)) {
-            res = Math.round(res * 1e10) / 1e10;
+            res = Math.round(res * 1e10) / 1e10; // 消除 JS 浮點數精度誤差
         }
 
         document.getElementById('lcd-hist').innerText = "Ans = " + expr;
         expr = res.toString();
         updateLCD(expr);
     } catch (e) {
+        // 模糊化錯誤訊息，防止洩漏實作細節
         updateLCD("Error");
         expr = "";
     }
@@ -154,7 +156,12 @@ window.purgeAndClose = function() {
     document.getElementById('vault-modal').style.display = 'none';
 };
 
-// 記憶體保護
+// 閒置計時器事件監聽
+['click', 'keydown', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetIdleTimer);
+});
+
+// 隱蔽保護：切換至背景/縮小/鎖屏時立刻銷毀 RAM 數據
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         purgeAndClose();
@@ -164,7 +171,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', purgeAndClose);
 window.addEventListener('pagehide', purgeAndClose);
 
-// Service Worker
+// 註冊 Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
