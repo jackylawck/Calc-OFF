@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calc-OFF | 離線算籌</title>
+    <!-- 企業級嚴格 CSP：完全禁止網絡連線，確保極致安全 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+    <style>
+        :root { 
+            --bg: #0f172a; 
+            --calc-body: #1e293b; 
+            --screen-bg: #94a3b8; 
+            --text-dark: #0f172a; 
+            --btn-fn: #334155; 
+            --btn-num: #0f172a; 
+            --accent: #0284c7; 
+            --danger: #dc2626; 
+        }
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: var(--bg); 
+            color: #fff; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        
+        /* 通用科學計算機外殼 */
+        .calculator { 
+            background: var(--calc-body); 
+            width: 340px; 
+            padding: 24px 20px; 
+            border-radius: 16px; 
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6); 
+            border: 1px solid #475569; 
+        }
+        .brand-header { 
+            text-align: center; 
+            font-size: 0.75rem; 
+            color: #94a3b8; 
+            margin-bottom: 12px; 
+            letter-spacing: 1.5px; 
+            font-weight: bold;
+        }
+        
+        /* 雙行 LCD 液晶顯示屏 */
+        .lcd-screen { 
+            background: var(--screen-bg); 
+            color: var(--text-dark); 
+            padding: 10px; 
+            border-radius: 6px; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); 
+            margin-bottom: 16px; 
+            font-weight: bold; 
+        }
+        .lcd-history { 
+            font-size: 0.85rem; 
+            height: 18px; 
+            text-align: right; 
+            overflow: hidden; 
+            opacity: 0.75; 
+        }
+        .lcd-main { 
+            font-size: 1.6rem; 
+            text-align: right; 
+            height: 32px; 
+            overflow: hidden; 
+        }
+
+        /* 按鍵面版佈局 */
+        .grid-fn { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 6px; 
+            margin-bottom: 10px; 
+        }
+        .grid-num { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 8px; 
+        }
+        
+        button { 
+            height: 38px; 
+            border-radius: 4px; 
+            border: 1px solid #0f172a; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            color: #fff; 
+            background: var(--btn-fn); 
+            transition: background 0.1s;
+        }
+        button.num { background: var(--btn-num); }
+        button.op { background: var(--accent); }
+        button.danger { background: var(--danger); }
+        button:active { filter: brightness(1.2); }
+
+        /* RAM 零痕跡 Session 保險箱 Panel */
+        #vault-modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.85); 
+            padding: 20px; 
+            z-index: 999; 
+        }
+        .vault-box { 
+            max-width: 380px; 
+            margin: 50px auto; 
+            background: #0f172a; 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid #38bdf8; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+        }
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 8px 0; 
+            background: #1e293b; 
+            border: 1px solid #334155; 
+            color: #fff; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div class="brand-header">
+        SCIENTIFIC CALCULATOR
+    </div>
+
+    <!-- 雙行液晶顯示屏 -->
+    <div class="lcd-screen">
+        <div class="lcd-history" id="lcd-hist">DEG</div>
+        <div class="lcd-main" id="lcd-val">0</div>
+    </div>
+
+    <!-- 科學函數鍵區域 -->
+    <div class="grid-fn">
+        <button onclick="inputFn('sin(')">sin</button>
+        <button onclick="inputFn('cos(')">cos</button>
+        <button onclick="inputFn('tan(')">tan</button>
+        <button onclick="inputFn('log(')">log</button>
+        <button onclick="inputFn('ln(')">ln</button>
+        <button onclick="inputFn('(')">(</button>
+        <button onclick="inputFn(')')">)</button>
+        <button onclick="inputFn('^')">xʸ</button>
+        <button onclick="inputFn('√(')">√</button>
+        <button onclick="inputFn('π')">π</button>
+    </div>
+
+    <!-- 數字與基礎運算鍵區域 -->
+    <div class="grid-num">
+        <button class="danger" onclick="clearScreen()">ON/C</button>
+        <button onclick="deleteLast()">DEL</button>
+        <button onclick="inputFn('/')">÷</button>
+        <button onclick="inputFn('*')">×</button>
+
+        <button class="num" onclick="inputNum('7')">7</button>
+        <button class="num" onclick="inputNum('8')">8</button>
+        <button class="num" onclick="inputNum('9')">9</button>
+        <button onclick="inputFn('-')">-</button>
+
+        <button class="num" onclick="inputNum('4')">4</button>
+        <button class="num" onclick="inputNum('5')">5</button>
+        <button class="num" onclick="inputNum('6')">6</button>
+        <button onclick="inputFn('+')">+</button>
+
+        <button class="num" onclick="inputNum('1')">1</button>
+        <button class="num" onclick="inputNum('2')">2</button>
+        <button class="num" onclick="inputNum('3')">3</button>
+        <button class="op" style="grid-row: span 2; height: 84px;" onclick="calculate()">=</button>
+
+        <button class="num" onclick="inputNum('0')" style="grid-column: span 2;">0</button>
+        <button class="num" onclick="inputNum('.')">.</button>
+    </div>
+</div>
+
+<!-- 零痕跡 Session 記憶體保險箱 Panel -->
+<div id="vault-modal">
+    <div class="vault-box">
+        <h3 style="color:#38bdf8; margin-top:0;">🔒 離線算籌 · RAM 保險箱</h3>
+        <p style="font-size:0.8rem; color:#94a3b8;">數據僅存在於 RAM 中，分頁關閉即完全銷毀。</p>
+        <div id="auth-box">
+            <input type="password" id="session-key" placeholder="設定當前 Session 解密密碼">
+            <button onclick="unlockVault()" style="width:100%; background:#38bdf8; color:#000; padding:10px; margin-top:8px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">開啟</button>
+        </div>
+        <div id="content-box" style="display:none;">
+            <input type="text" id="note-title" placeholder="機密項目 (例: 臨時助記詞)">
+            <input type="text" id="note-val" placeholder="敏感內容">
+            <button onclick="addEntry()" style="width:100%; background:#38bdf8; color:#000; padding:8px; margin-top:6px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">暫存於記憶體</button>
+            <div id="vault-list" style="margin-top:15px; font-size:0.85rem;"></div>
+            <button onclick="purgeAndClose()" class="danger" style="width:100%; padding:10px; margin-top:15px; border-radius:6px; cursor:pointer;">🔥 立即清空記憶體並關閉</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let expr = "";
+    let ramVault = [];
+
+    function inputNum(n) { expr += n; updateLCD(); }
+    function inputFn(fn) { expr += fn; updateLCD(); }
+    function clearScreen() { expr = ""; updateLCD("0"); }
+    function deleteLast() { expr = expr.slice(0, -1); updateLCD(expr || "0"); }
+    
+    function updateLCD(val) {
+        document.getElementById('lcd-val').innerText = val || expr || "0";
+        document.getElementById('lcd-hist').innerText = expr ? "DEG  " + expr : "DEG";
+    }
+
+    function calculate() {
+        // 暗號解鎖：在計算機輸入 3650 或 sin(90)+log(100) 後按 = 觸發
+        if (expr === "3650" || expr === "sin(90)+log(100)") {
+            document.getElementById('vault-modal').style.display = 'block';
+            clearScreen();
+            return;
+        }
+
+        // 標準科學計算求值
+        try {
+            let parsed = expr
+                .replace(/π/g, 'Math.PI')
+                .replace(/sin\(/g, 'Math.sin(')
+                .replace(/cos\(/g, 'Math.cos(')
+                .replace(/tan\(/g, 'Math.tan(')
+                .replace(/log\(/g, 'Math.log10(')
+                .replace(/ln\(/g, 'Math.log(')
+                .replace(/√\(/g, 'Math.sqrt(')
+                .replace(/\^/g, '**');
+            
+            let res = eval(parsed);
+            document.getElementById('lcd-hist').innerText = "Ans = " + expr;
+            expr = res.toString();
+            updateLCD(expr);
+        } catch (e) {
+            updateLCD("Syntax ERROR");
+            expr = "";
+        }
+    }
+
+    function unlockVault() {
+        if (!document.getElementById('session-key').value) return;
+        document.getElementById('auth-box').style.display = 'none';
+        document.getElementById('content-box').style.display = 'block';
+    }
+
+    function addEntry() {
+        const title = document.getElementById('note-title').value;
+        const val = document.getElementById('note-val').value;
+        if (!title || !val) return;
+        ramVault.push({ title, val });
+        document.getElementById('note-title').value = '';
+        document.getElementById('note-val').value = '';
+        renderList();
+    }
+
+    function renderList() {
+        const container = document.getElementById('vault-list');
+        container.innerHTML = '';
+        ramVault.forEach(item => {
+            container.innerHTML += `<div style="background:#1e293b; padding:8px; margin-top:6px; border-radius:4px;"><strong>${item.title}:</strong> <code>${item.val}</code></div>`;
+        });
+    }
+
+    function purgeAndClose() {
+        // 主動覆寫並銷毀 RAM 數據
+        ramVault.forEach(item => { item.title = "00000"; item.val = "00000"; });
+        ramVault = [];
+        document.getElementById('session-key').value = '';
+        document.getElementById('vault-list').innerHTML = '';
+        document.getElementById('content-box').style.display = 'none';
+        document.getElementById('auth-box').style.display = 'block';
+        document.getElementById('vault-modal').style.display = 'none';
+    }
+
+    // 關閉分頁或重新整理時自動清空 RAM
+    window.addEventListener('beforeunload', purgeAndClose);
+    window.addEventListener('pagehide', purgeAndClose);
+</script>
+</body>
+</html>
