@@ -39,19 +39,16 @@ async function checkSecret(input) {
     }
 }
 
-// 🔧 終極修正：白名單單詞提取驗證法 (絕不誤殺 log10, sin, cos, tan, ln, sqrt, PI)
+// 安全數學表達式求值器 (嚴格白名單單詞過濾)
 function safeEvaluate(mathExpr) {
-    // 提取所有連續字母 (識別字)
+    const allowedWords = new Set(['Math', 'sin', 'cos', 'tan', 'log10', 'log', 'sqrt', 'PI']);
     const words = mathExpr.match(/[a-zA-Z_$][a-zA-Z0-9_$]*/g) || [];
-    const allowedWords = ['Math', 'sin', 'cos', 'tan', 'log10', 'log', 'sqrt', 'PI'];
-
-    // 只要出現非白名單的識別字（例如 window, document, fetch, eval 等），一律阻擋
+    
     for (let word of words) {
-        if (!allowedWords.includes(word)) {
-            throw new Error('Unsafe Identifier: ' + word);
+        if (!allowedWords.has(word)) {
+            throw new Error('Unsafe identifier: ' + word);
         }
     }
-
     return Function('"use strict"; return (' + mathExpr + ')')();
 }
 
@@ -59,7 +56,7 @@ window.calculate = async function() {
     resetIdleTimer();
     vibrate();
     
-    // 1. 驗證解鎖暗號
+    // 1. 驗證解鎖暗號 (3650)
     if (await checkSecret(expr)) {
         document.getElementById('vault-modal').style.display = 'block';
         clearScreen();
@@ -72,11 +69,10 @@ window.calculate = async function() {
     try {
         let parsed = expr;
 
-        // 2. 轉換乘除與科學運算符號
+        // 2. 轉換科學計算符號為 JavaScript 語法
         parsed = parsed
-            .replace(/×/gi, '*')
-            .replace(/÷/gi, '/')
-            .replace(/x/gi, '*')
+            .replace(/×/g, '*')
+            .replace(/÷/g, '/')
             .replace(/π/g, 'Math.PI')
             .replace(/sin\(/g, 'Math.sin((Math.PI/180)*')
             .replace(/cos\(/g, 'Math.cos((Math.PI/180)*')
@@ -86,7 +82,7 @@ window.calculate = async function() {
             .replace(/√\(/g, 'Math.sqrt(')
             .replace(/\^/g, '**');
 
-        // 3. 自動補全省略乘號 (例: 9Math.PI -> 9*Math.PI, 9( -> 9*()
+        // 3. 自動補全省略乘號 (例如 9Math.PI -> 9*Math.PI, 9( -> 9*()
         parsed = parsed.replace(/(\d)(Math\.|\()/g, '$1*$2');
         parsed = parsed.replace(/(\))(\d|Math\.)/g, '$1*$2');
 
@@ -98,11 +94,11 @@ window.calculate = async function() {
             openBrackets--;
         }
 
-        // 5. 執行安全求值
+        // 5. 執行安全計算
         let res = safeEvaluate(parsed);
 
         if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
-            res = Math.round(res * 1e10) / 1e10; // 消除 JS 浮點數精度誤差
+            res = Math.round(res * 1e10) / 1e10; // 消除浮點數微小誤差
         } else {
             throw new Error("Invalid result");
         }
@@ -111,6 +107,7 @@ window.calculate = async function() {
         expr = res.toString();
         updateLCD(expr);
     } catch (e) {
+        console.error(e);
         updateLCD("Error");
         expr = "";
     }
@@ -171,10 +168,11 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', purgeAndClose);
 window.addEventListener('pagehide', purgeAndClose);
 
+// 自動檢查並強制更新 Service Worker 避免快取鎖死
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW Registered:', reg.scope))
-            .catch(err => console.log('SW Registration Failed:', err));
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.update(); // 強制檢查並更新伺服器最新版本
+        }).catch(err => console.log('SW Registration Failed:', err));
     });
 }
