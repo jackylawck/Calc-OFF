@@ -160,8 +160,8 @@
     <div class="grid-num">
         <button class="danger" onclick="clearScreen()">ON/C</button>
         <button onclick="deleteLast()">DEL</button>
-        <button onclick="inputFn('/')">÷</button>
-        <button onclick="inputFn('*')">×</button>
+        <button onclick="inputFn('÷')">÷</button>
+        <button onclick="inputFn('×')">×</button>
 
         <button class="num" onclick="inputNum('7')">7</button>
         <button class="num" onclick="inputNum('8')">8</button>
@@ -217,16 +217,20 @@
     }
 
     function calculate() {
-        // 暗號解鎖：在計算機輸入 3650 或 sin(90)+log(100) 後按 = 觸發
+        // 暗號解鎖：輸入 3650 或 sin(90)+log(100) 後按 = 觸發
         if (expr === "3650" || expr === "sin(90)+log(100)") {
             document.getElementById('vault-modal').style.display = 'block';
             clearScreen();
             return;
         }
 
-        // 標準科學計算求值
+        if (!expr) return;
+
+        // 替換所有科學符號與乘除號為 JavaScript 合法語法
         try {
             let parsed = expr
+                .replace(/×/g, '*')
+                .replace(/÷/g, '/')
                 .replace(/π/g, 'Math.PI')
                 .replace(/sin\(/g, 'Math.sin(')
                 .replace(/cos\(/g, 'Math.cos(')
@@ -235,8 +239,13 @@
                 .replace(/ln\(/g, 'Math.log(')
                 .replace(/√\(/g, 'Math.sqrt(')
                 .replace(/\^/g, '**');
-            
-            let res = eval(parsed);
+
+            let res = Function('"use strict"; return (' + parsed + ')')();
+
+            if (typeof res === 'number' && !isNaN(res)) {
+                res = Math.round(res * 1e10) / 1e10;
+            }
+
             document.getElementById('lcd-hist').innerText = "Ans = " + expr;
             expr = res.toString();
             updateLCD(expr);
