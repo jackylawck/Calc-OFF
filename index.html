@@ -2,94 +2,109 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Calc-OFF | 離線算籌</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Offline - 離線守密</title>
+    <meta name="description" content="純本地加密的離線密碼保險箱。數據零上雲，只存在你瀏覽器的 localStorage。">
     
-    <!-- PWA 與 App 圖示設定 -->
+    <!-- 企業級嚴格 CSP：無 unsafe-inline、網絡隔離、防 Clickjacking -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; frame-ancestors 'none';">
+    
+    <!-- PWA 標籤與圖示設定 (指向新圖示檔名) -->
     <link rel="manifest" href="./manifest.json">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
-    <meta name="theme-color" content="#0f172a">
+    <link rel="icon" type="image/png" sizes="192x192" href="./CalcOFFicon-192.png">
+    <link rel="apple-touch-icon" href="./CalcOFFicon-512.png">
+    
+    <meta name="theme-color" content="#0b0f19">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Calc-OFF">
-
-    <!-- 企業級 CSP：允許本地腳本、樣式與數學表達式 Function() 執行 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <meta name="apple-mobile-web-app-title" content="Safe Offline">
     
+    <!-- 引入外部 CSS 與 JS -->
     <link rel="stylesheet" href="./style.css">
     <script src="./app.js" defer></script>
 </head>
 <body>
-
-<div class="calculator">
-    <div class="brand-header">
-        SCIENTIFIC CALCULATOR
-    </div>
-
-    <div class="lcd-screen">
-        <div class="lcd-history" id="lcd-hist">DEG</div>
-        <div class="lcd-main" id="lcd-val">0</div>
-    </div>
-
-    <!-- 科學函數按鈕區 (包含 (-) 負數按鈕) -->
-    <div class="grid-fn">
-        <button onclick="inputFn('sin(')">sin</button>
-        <button onclick="inputFn('cos(')">cos</button>
-        <button onclick="inputFn('tan(')">tan</button>
-        <button onclick="inputFn('log(')">log</button>
-        <button onclick="inputFn('ln(')">ln</button>
-        <button onclick="inputFn('(')">(</button>
-        <button onclick="inputFn(')')">)</button>
-        <button onclick="inputFn('^')">xʸ</button>
-        <button onclick="inputFn('√(')">√</button>
-        <button onclick="inputFn('-')">(-)</button>
-    </div>
-
-    <!-- 數字與基礎運算按鈕區 -->
-    <div class="grid-num">
-        <button class="danger" onclick="clearScreen()">ON/C</button>
-        <button onclick="deleteLast()">DEL</button>
-        <button onclick="inputFn('÷')">÷</button>
-        <button onclick="inputFn('×')">×</button>
-
-        <button class="num" onclick="inputNum('7')">7</button>
-        <button class="num" onclick="inputNum('8')">8</button>
-        <button class="num" onclick="inputNum('9')">9</button>
-        <button onclick="inputFn('-')">-</button>
-
-        <button class="num" onclick="inputNum('4')">4</button>
-        <button class="num" onclick="inputNum('5')">5</button>
-        <button class="num" onclick="inputNum('6')">6</button>
-        <button onclick="inputFn('+')">+</button>
-
-        <button class="num" onclick="inputNum('1')">1</button>
-        <button class="num" onclick="inputNum('2')">2</button>
-        <button class="num" onclick="inputNum('3')">3</button>
-        <button class="op" style="grid-row: span 2; height: 92px;" onclick="calculate()">=</button>
-
-        <button class="num" onclick="inputNum('0')" style="grid-column: span 2;">0</button>
-        <button class="num" onclick="inputNum('.')">.</button>
-    </div>
-</div>
-
-<!-- RAM 零痕跡 Session 保險箱 Modal -->
-<div id="vault-modal">
-    <div class="vault-box">
-        <h3 style="color:#38bdf8; margin-top:0;">🔒 離線算籌 · RAM 保險箱</h3>
-        <p style="font-size:0.8rem; color:#94a3b8;">數據僅存在於 RAM 中，App 關閉、切換至背景或閒置 5 分鐘即完全銷毀。</p>
-        <div id="auth-box">
-            <input type="password" id="session-key" placeholder="設定當前 Session 解密密碼">
-            <button onclick="unlockVault()" style="width:100%; background:#38bdf8; color:#000; padding:10px; margin-top:8px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">開啟</button>
+    <div class="container">
+        <div class="lang-switch">
+            <button class="lang-btn" id="btn-zh">繁體中文</button>
+            <button class="lang-btn" id="btn-en">English</button>
         </div>
-        <div id="content-box" style="display:none;">
-            <input type="text" id="note-title" placeholder="機密項目 (例: 臨時助記詞)">
-            <input type="text" id="note-val" placeholder="敏感內容">
-            <button onclick="addEntry()" style="width:100%; background:#38bdf8; color:#000; padding:8px; margin-top:6px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">暫存於記憶體</button>
-            <div id="vault-list" style="margin-top:15px; font-size:0.85rem;"></div>
-            <button onclick="purgeAndClose()" class="danger" style="width:100%; padding:10px; margin-top:15px; border-radius:6px; cursor:pointer;">🔥 立即清空記憶體並關閉</button>
-        </div>
-    </div>
-</div>
 
+        <header>
+            <h1>🔒 Safe Offline</h1>
+            <p class="slogan" data-i18n="slogan"></p>
+        </header>
+
+        <div class="card notice-card" id="notice-section">
+            <h4 style="margin:0;" data-i18n="noticeTitle"></h4>
+            <ul class="notice-list">
+                <li data-i18n="noticePoint1"></li>
+                <li data-i18n="noticePoint2"></li>
+                <li data-i18n="noticePoint3"></li>
+            </ul>
+        </div>
+        
+        <div class="card" id="auth-card">
+            <h3 data-i18n="unlockTitle"></h3>
+            <div style="position:relative;">
+                <input type="password" id="master-key" data-i18n-placeholder="masterKeyPlaceholder">
+            </div>
+            <button class="primary-btn" id="unlock-btn" data-i18n="unlockBtn"></button>
+            
+            <details class="reset-details">
+                <summary data-i18n="resetToggleText"></summary>
+                <div class="reset-box">
+                    <p class="reset-notice" data-i18n="resetWarningText"></p>
+                    <button class="danger-btn" id="btn-reset" data-i18n="resetBtnText"></button>
+                </div>
+            </details>
+        </div>
+
+        <div id="vault-content" style="display: none;">
+            <div class="status-bar">
+                <span class="status-text" data-i18n="statusUnlocked"></span>
+                <button class="lock-btn" id="btn-lock" data-i18n="lockBtn"></button>
+            </div>
+
+            <div class="card">
+                <h3 data-i18n="addTitle"></h3>
+                <input type="text" id="site-name" data-i18n-placeholder="siteNamePlaceholder">
+                <input type="text" id="site-user" data-i18n-placeholder="siteUserPlaceholder">
+                <div class="flex-row">
+                    <input type="password" id="site-pass" data-i18n-placeholder="sitePassPlaceholder">
+                    <button class="secondary-btn" style="width:120px;" id="btn-gen-pass" data-i18n="generateBtn"></button>
+                </div>
+                <input type="url" id="site-url" data-i18n-placeholder="siteUrlPlaceholder">
+                <button class="primary-btn" id="btn-add-entry" data-i18n="addBtn"></button>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 data-i18n="listTitle" style="margin:0;"></h3>
+                    <input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" style="width: 200px; padding: 6px 12px; margin:0;">
+                </div>
+                <div id="pass-list" style="margin-top: 15px;"></div>
+            </div>
+
+            <div class="card">
+                <h3 data-i18n="backupTitle"></h3>
+                <button class="secondary-btn" id="btn-change-pass" data-i18n="changePassBtn" style="margin-bottom: 12px;"></button>
+                <button class="primary-btn" id="btn-export" data-i18n="exportBtn" style="margin-bottom: 15px;"></button>
+                
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                
+                <h4 style="margin: 0 0 8px 0;" data-i18n="importTitle"></h4>
+                <div class="file-upload-wrapper">
+                    <label for="import-file" class="file-upload-label" id="file-label" data-i18n="chooseFileBtn"></label>
+                    <input type="file" id="import-file" accept=".json">
+                </div>
+                <button class="primary-btn" id="btn-import" data-i18n="importBtn"></button>
+            </div>
+        </div>
+
+        <p class="notice-text" data-i18n="footerNotice"></p>
+    </div>
+
+    <div id="toast"></div>
 </body>
 </html>
