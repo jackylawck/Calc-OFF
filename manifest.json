@@ -1,17 +1,23 @@
 {
-  "name": "Calc-OFF 離線算籌",
-  "short_name": "Calc-OFF",
-  "description": "離線算籌 · 運算於手，運籌帷幄。表面科學計算機，內藏 RAM 零痕跡保險箱。",
+  "name": "Safe Offline - 離線守密",
+  "short_name": "Safe Offline",
+  "description": "純本地 AES-GCM 加密密碼保險箱。數據零上雲，存在你手。",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%231e293b'/><text x='50%' y='68%' font-size='320' text-anchor='middle'>🧮</text></svg>",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "./CalcOFFicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./CalcOFFicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
