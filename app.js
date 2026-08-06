@@ -11,7 +11,7 @@ function vibrate() {
 
 function resetIdleTimer() {
     clearTimeout(idleTimer);
-    if (document.getElementById('vault-modal').style.display === 'block') {
+    if (document.getElementById('vault-modal') && document.getElementById('vault-modal').style.display === 'block') {
         idleTimer = setTimeout(() => {
             purgeAndClose();
         }, IDLE_TIMEOUT);
@@ -23,30 +23,28 @@ function updateLCD(val) {
     document.getElementById('lcd-hist').innerText = expr ? "DEG  " + expr : "DEG";
 }
 
+// 顯式掛載至全局 window 作用域，100% 相容 HTML 的 onclick 觸發
 window.inputNum = function(n) { resetIdleTimer(); vibrate(); expr += n; updateLCD(); };
 window.inputFn = function(fn) { resetIdleTimer(); vibrate(); expr += fn; updateLCD(); };
 window.clearScreen = function() { resetIdleTimer(); vibrate(); expr = ""; updateLCD("0"); };
 window.deleteLast = function() { resetIdleTimer(); vibrate(); expr = expr.slice(0, -1); updateLCD(expr || "0"); };
 
 async function checkSecret(input) {
-    const enc = new TextEncoder();
-    const hash = await crypto.subtle.digest('SHA-256', enc.encode(input));
-    const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-    return hex === SECRET_HASH;
-}
-
-function safeEvaluate(mathExpr) {
-    const dangerous = /[^0-9+\-*/.()\sMath\.PI Math\.sin Math\.cos Math\.tan Math\.log10 Math\.log Math\.sqrt]/;
-    if (dangerous.test(mathExpr)) {
-        throw new Error('Unsafe Math Expression');
+    try {
+        const enc = new TextEncoder();
+        const hash = await crypto.subtle.digest('SHA-256', enc.encode(input));
+        const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        return hex === SECRET_HASH;
+    } catch (e) {
+        return false;
     }
-    return Function('"use strict"; return (' + mathExpr + ')')();
 }
 
 window.calculate = async function() {
     resetIdleTimer();
     vibrate();
     
+    // 1. 驗證解鎖暗號
     if (await checkSecret(expr)) {
         document.getElementById('vault-modal').style.display = 'block';
         clearScreen();
@@ -59,26 +57,23 @@ window.calculate = async function() {
     try {
         let parsed = expr;
 
-        // 1. 自動補全省略的乘號 (例: 9log -> 9*log, 9( -> 9*(, )9 -> )*9, 9π -> 9*π)
-        parsed = parsed.replace(/(\d)(\()/g, '$1*(');
-        parsed = parsed.replace(/(\))(\d)/g, '$1*$2');
-        parsed = parsed.replace(/(\d)(sin|cos|tan|log|ln|√|π)/g, '$1*$2');
-        parsed = parsed.replace(/(\))\(sin|cos|tan|log|ln|√|π\)/g, '$1*$2');
-
-        // 2. 轉換科學符號為 JavaScript 函數
+        // 2. 轉換乘除與科學運算符號
         parsed = parsed
             .replace(/×/g, '*')
             .replace(/÷/g, '/')
             .replace(/π/g, 'Math.PI')
-            .replace(/sin\(/g, '(Math.PI/180)*Math.sin(')
-            .replace(/cos\(/g, 'Math.cos(')
-            .replace(/tan\(/g, 'Math.tan(')
+            .replace(/sin\(/g, 'Math.sin(Math.PI/180*')
+            .replace(/cos\(/g, 'Math.cos(Math.PI/180*')
+            .replace(/tan\(/g, 'Math.tan(Math.PI/180*')
             .replace(/log\(/g, 'Math.log10(')
             .replace(/ln\(/g, 'Math.log(')
             .replace(/√\(/g, 'Math.sqrt(')
             .replace(/\^/g, '**');
 
-        // 3. 自動補齊尾部未封閉的括號 (配對 '(' 與 ')')
+        // 3. 自動補全省略的乘號 (例如 9Math.PI -> 9*Math.PI 或 9( -> 9*()
+        parsed = parsed.replace(/(\d)(Math\.|\()/g, '$1*$2');
+
+        // 4. 自動補齊未封閉的括號
         let openBrackets = (parsed.match(/\(/g) || []).length;
         let closeBrackets = (parsed.match(/\)/g) || []).length;
         while (openBrackets > closeBrackets) {
@@ -86,10 +81,13 @@ window.calculate = async function() {
             openBrackets--;
         }
 
-        let res = safeEvaluate(parsed);
+        // 5. 安全運算
+        let res = Function('"use strict"; return (' + parsed + ')')();
 
-        if (typeof res === 'number' && !isNaN(res)) {
+        if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
             res = Math.round(res * 1e10) / 1e10;
+        } else {
+            throw new Error("Invalid math result");
         }
 
         document.getElementById('lcd-hist').innerText = "Ans = " + expr;
@@ -136,11 +134,11 @@ window.purgeAndClose = function() {
     clearTimeout(idleTimer);
     ramVault.forEach(item => { item.title = "00000"; item.val = "00000"; });
     ramVault = [];
-    document.getElementById('session-key').value = '';
-    document.getElementById('vault-list').innerHTML = '';
-    document.getElementById('content-box').style.display = 'none';
-    document.getElementById('auth-box').style.display = 'block';
-    document.getElementById('vault-modal').style.display = 'none';
+    if (document.getElementById('session-key')) document.getElementById('session-key').value = '';
+    if (document.getElementById('vault-list')) document.getElementById('vault-list').innerHTML = '';
+    if (document.getElementById('content-box')) document.getElementById('content-box').style.display = 'none';
+    if (document.getElementById('auth-box')) document.getElementById('auth-box').style.display = 'block';
+    if (document.getElementById('vault-modal')) document.getElementById('vault-modal').style.display = 'none';
 };
 
 ['click', 'keydown', 'touchstart'].forEach(evt => {
