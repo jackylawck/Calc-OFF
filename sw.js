@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calcoff-v2';
+const CACHE_NAME = 'calcoff-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
