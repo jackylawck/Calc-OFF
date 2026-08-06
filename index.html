@@ -2,12 +2,20 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calc-OFF | Scientific Calculator</title>
-    <!-- 內建 SVG Favicon (無需額外圖片檔案) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Calc-OFF | 離線算籌</title>
+    
+    <!-- PWA 與 App 圖示設定 -->
+    <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
-    <!-- 企業級嚴格 CSP：完全禁止網絡連線 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:;">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Calc-OFF">
+
+    <!-- 企業級嚴格 CSP：禁止外部網路連線，僅允許 data: 圖示與本地腳本 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    
     <style>
         :root { 
             --bg: #0f172a; 
@@ -28,6 +36,8 @@
             align-items: center; 
             min-height: 100vh; 
             margin: 0; 
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .calculator { 
@@ -84,20 +94,20 @@
         }
         
         button { 
-            height: 38px; 
-            border-radius: 4px; 
+            height: 42px; 
+            border-radius: 6px; 
             border: 1px solid #0f172a; 
-            font-size: 0.85rem; 
+            font-size: 0.9rem; 
             font-weight: bold; 
             cursor: pointer; 
             color: #fff; 
             background: var(--btn-fn); 
-            transition: background 0.1s;
+            transition: background 0.1s, transform 0.05s;
         }
         button.num { background: var(--btn-num); }
         button.op { background: var(--accent); }
         button.danger { background: var(--danger); }
-        button:active { filter: brightness(1.2); }
+        button:active { filter: brightness(1.2); transform: scale(0.96); }
 
         #vault-modal { 
             display: none; 
@@ -109,7 +119,7 @@
         }
         .vault-box { 
             max-width: 380px; 
-            margin: 50px auto; 
+            margin: 40px auto; 
             background: #0f172a; 
             padding: 20px; 
             border-radius: 12px; 
@@ -124,6 +134,8 @@
             color: #fff; 
             border-radius: 6px; 
             box-sizing: border-box; 
+            user-select: text;
+            -webkit-user-select: text;
         }
     </style>
 </head>
@@ -171,7 +183,7 @@
         <button class="num" onclick="inputNum('1')">1</button>
         <button class="num" onclick="inputNum('2')">2</button>
         <button class="num" onclick="inputNum('3')">3</button>
-        <button class="op" style="grid-row: span 2; height: 84px;" onclick="calculate()">=</button>
+        <button class="op" style="grid-row: span 2; height: 92px;" onclick="calculate()">=</button>
 
         <button class="num" onclick="inputNum('0')" style="grid-column: span 2;">0</button>
         <button class="num" onclick="inputNum('.')">.</button>
@@ -181,7 +193,7 @@
 <div id="vault-modal">
     <div class="vault-box">
         <h3 style="color:#38bdf8; margin-top:0;">🔒 離線算籌 · RAM 保險箱</h3>
-        <p style="font-size:0.8rem; color:#94a3b8;">數據僅存在於 RAM 中，分頁關閉即完全銷毀。</p>
+        <p style="font-size:0.8rem; color:#94a3b8;">數據僅存在於 RAM 中，App 關閉即完全銷毀。</p>
         <div id="auth-box">
             <input type="password" id="session-key" placeholder="設定當前 Session 解密密碼">
             <button onclick="unlockVault()" style="width:100%; background:#38bdf8; color:#000; padding:10px; margin-top:8px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">開啟</button>
@@ -211,7 +223,7 @@
     }
 
     function calculate() {
-        // 解鎖暗號：輸入 3650 或 sin(90)+log(100) 後按 =
+        // 暗號解鎖：輸入 3650 或 sin(90)+log(100) 後按 =
         if (expr === "3650" || expr === "sin(90)+log(100)") {
             document.getElementById('vault-modal').style.display = 'block';
             clearScreen();
@@ -221,12 +233,11 @@
         if (!expr) return;
 
         try {
-            // 正確處理 × 與 ÷ 符號
             let parsed = expr
                 .replace(/×/g, '*')
                 .replace(/÷/g, '/')
                 .replace(/π/g, 'Math.PI')
-                .replace(/sin\(/g, '(Math.PI/180)*Math.sin(') // 轉為 Degree 計算
+                .replace(/sin\(/g, '(Math.PI/180)*Math.sin(')
                 .replace(/cos\(/g, 'Math.cos(')
                 .replace(/tan\(/g, 'Math.tan(')
                 .replace(/log\(/g, 'Math.log10(')
@@ -237,7 +248,7 @@
             let res = Function('"use strict"; return (' + parsed + ')')();
 
             if (typeof res === 'number' && !isNaN(res)) {
-                res = Math.round(res * 1e10) / 1e10; // 消除 Javascript 浮點數微小誤差
+                res = Math.round(res * 1e10) / 1e10;
             }
 
             document.getElementById('lcd-hist').innerText = "Ans = " + expr;
@@ -285,6 +296,15 @@
 
     window.addEventListener('beforeunload', purgeAndClose);
     window.addEventListener('pagehide', purgeAndClose);
+
+    // 註冊 PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW Registered:', reg.scope))
+                .catch(err => console.log('SW Registration Failed:', err));
+        });
+    }
 </script>
 </body>
 </html>
