@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Calc-OFF">
 
-    <!-- 關鍵修復：加入 'unsafe-eval' 允許 JavaScript 數學運算式 Function() 執行 -->
+    <!-- 企業級 CSP：允許本地腳本、樣式與數學表達式 Function() 執行 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
     
     <link rel="stylesheet" href="./style.css">
@@ -31,6 +31,7 @@
         <div class="lcd-main" id="lcd-val">0</div>
     </div>
 
+    <!-- 科學函數按鈕區 (包含 (-) 負數按鈕) -->
     <div class="grid-fn">
         <button onclick="inputFn('sin(')">sin</button>
         <button onclick="inputFn('cos(')">cos</button>
@@ -41,9 +42,10 @@
         <button onclick="inputFn(')')">)</button>
         <button onclick="inputFn('^')">xʸ</button>
         <button onclick="inputFn('√(')">√</button>
-        <button onclick="inputFn('π')">π</button>
+        <button onclick="inputFn('-')">(-)</button>
     </div>
 
+    <!-- 數字與基礎運算按鈕區 -->
     <div class="grid-num">
         <button class="danger" onclick="clearScreen()">ON/C</button>
         <button onclick="deleteLast()">DEL</button>
@@ -70,6 +72,7 @@
     </div>
 </div>
 
+<!-- RAM 零痕跡 Session 保險箱 Modal -->
 <div id="vault-modal">
     <div class="vault-box">
         <h3 style="color:#38bdf8; margin-top:0;">🔒 離線算籌 · RAM 保險箱</h3>
