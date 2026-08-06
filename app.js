@@ -23,7 +23,6 @@ function updateLCD(val) {
     document.getElementById('lcd-hist').innerText = expr ? "DEG  " + expr : "DEG";
 }
 
-// 顯式掛載至全局 window 作用域，100% 相容 HTML 的 onclick 觸發
 window.inputNum = function(n) { resetIdleTimer(); vibrate(); expr += n; updateLCD(); };
 window.inputFn = function(fn) { resetIdleTimer(); vibrate(); expr += fn; updateLCD(); };
 window.clearScreen = function() { resetIdleTimer(); vibrate(); expr = ""; updateLCD("0"); };
@@ -40,11 +39,22 @@ async function checkSecret(input) {
     }
 }
 
+// 徹底解決：字串清洗式安全驗證，完全消除 Regex 語法漏洞
+function safeEvaluate(mathExpr) {
+    const cleaned = mathExpr
+        .replace(/Math\.(sin|cos|tan|log10|log|sqrt|PI)/g, '')
+        .replace(/[0-9+\-*/.()\s]/g, '');
+    
+    if (cleaned.length > 0) {
+        throw new Error('Unsafe Math Expression');
+    }
+    return Function('"use strict"; return (' + mathExpr + ')')();
+}
+
 window.calculate = async function() {
     resetIdleTimer();
     vibrate();
     
-    // 1. 驗證解鎖暗號
     if (await checkSecret(expr)) {
         document.getElementById('vault-modal').style.display = 'block';
         clearScreen();
@@ -57,23 +67,25 @@ window.calculate = async function() {
     try {
         let parsed = expr;
 
-        // 2. 轉換乘除與科學運算符號
+        // 1. 替換乘除與科學運算符號
         parsed = parsed
-            .replace(/×/g, '*')
-            .replace(/÷/g, '/')
+            .replace(/×/gi, '*')
+            .replace(/÷/gi, '/')
+            .replace(/x/gi, '*')
             .replace(/π/g, 'Math.PI')
-            .replace(/sin\(/g, 'Math.sin(Math.PI/180*')
-            .replace(/cos\(/g, 'Math.cos(Math.PI/180*')
-            .replace(/tan\(/g, 'Math.tan(Math.PI/180*')
+            .replace(/sin\(/g, 'Math.sin((Math.PI/180)*')
+            .replace(/cos\(/g, 'Math.cos((Math.PI/180)*')
+            .replace(/tan\(/g, 'Math.tan((Math.PI/180)*')
             .replace(/log\(/g, 'Math.log10(')
             .replace(/ln\(/g, 'Math.log(')
             .replace(/√\(/g, 'Math.sqrt(')
             .replace(/\^/g, '**');
 
-        // 3. 自動補全省略的乘號 (例如 9Math.PI -> 9*Math.PI 或 9( -> 9*()
+        // 2. 自動補全省略的乘號 (例: 9Math.PI -> 9*Math.PI, 9( -> 9*()
         parsed = parsed.replace(/(\d)(Math\.|\()/g, '$1*$2');
+        parsed = parsed.replace(/(\))(\d|Math\.)/g, '$1*$2');
 
-        // 4. 自動補齊未封閉的括號
+        // 3. 自動補齊未封閉的括號
         let openBrackets = (parsed.match(/\(/g) || []).length;
         let closeBrackets = (parsed.match(/\)/g) || []).length;
         while (openBrackets > closeBrackets) {
@@ -81,13 +93,13 @@ window.calculate = async function() {
             openBrackets--;
         }
 
-        // 5. 安全運算
-        let res = Function('"use strict"; return (' + parsed + ')')();
+        // 4. 安全計算
+        let res = safeEvaluate(parsed);
 
         if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
             res = Math.round(res * 1e10) / 1e10;
         } else {
-            throw new Error("Invalid math result");
+            throw new Error("Invalid result");
         }
 
         document.getElementById('lcd-hist').innerText = "Ans = " + expr;
