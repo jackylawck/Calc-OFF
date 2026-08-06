@@ -1,11 +1,11 @@
 {
-  "name": "Safe Offline - 離線守密",
-  "short_name": "Safe Offline",
-  "description": "純本地 AES-GCM 加密密碼保險箱。數據零上雲，存在你手。",
+  "name": "Calc-OFF 離線算籌",
+  "short_name": "Calc-OFF",
+  "description": "離線算籌 · 運算於手，運籌帷幄。表面科學計算機，內藏 RAM 零痕跡保險箱。",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0b0f19",
-  "theme_color": "#0b0f19",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
   "orientation": "portrait-primary",
   "icons": [
     {
