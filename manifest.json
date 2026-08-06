@@ -1,7 +1,7 @@
 {
   "name": "Calc-OFF 離線算籌",
   "short_name": "Calc-OFF",
-  "description": "離線算籌 · 運算於手，運籌帷幄。表面科學計算機，內藏 RAM 零痕跡保險箱。",
+  "description": "離線算籌 · 機算於手，運籌帷幄。科學計算機，內藏 RAM 零痕跡保險箱。",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
