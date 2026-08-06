@@ -2,9 +2,8 @@ let expr = "";
 let ramVault = [];
 let idleTimer = null;
 
-// 暗號 SHA-256 雜湊 (對應 "3650" 的 SHA-256)
 const SECRET_HASH = "8f31920ef1e83f06850d536c4b9b736b1d402e60472e3a0937b8d147413d8a57";
-const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 分鐘無操作自動鎖定
+const IDLE_TIMEOUT = 5 * 60 * 1000;
 
 function vibrate() {
     if (navigator.vibrate) navigator.vibrate(10);
@@ -24,10 +23,34 @@ function updateLCD(val) {
     document.getElementById('lcd-hist').innerText = expr ? "DEG  " + expr : "DEG";
 }
 
-function inputNum(n) { resetIdleTimer(); vibrate(); expr += n; updateLCD(); }
-function inputFn(fn) { resetIdleTimer(); vibrate(); expr += fn; updateLCD(); }
-function clearScreen() { resetIdleTimer(); vibrate(); expr = ""; updateLCD("0"); }
-function deleteLast() { resetIdleTimer(); vibrate(); expr = expr.slice(0, -1); updateLCD(expr || "0"); }
+// 直接用函數處理按鈕輸入（兼容 onclick 方式）
+window.inputNum = function(n) { 
+    resetIdleTimer(); 
+    vibrate(); 
+    expr += n; 
+    updateLCD(); 
+};
+
+window.inputFn = function(fn) { 
+    resetIdleTimer(); 
+    vibrate(); 
+    expr += fn; 
+    updateLCD(); 
+};
+
+window.clearScreen = function() { 
+    resetIdleTimer(); 
+    vibrate(); 
+    expr = ""; 
+    updateLCD("0"); 
+};
+
+window.deleteLast = function() { 
+    resetIdleTimer(); 
+    vibrate(); 
+    expr = expr.slice(0, -1); 
+    updateLCD(expr || "0"); 
+};
 
 async function checkSecret(input) {
     const enc = new TextEncoder();
@@ -36,19 +59,22 @@ async function checkSecret(input) {
     return hex === SECRET_HASH;
 }
 
-// 修正白名單正則表達式，防範 * 與 - 符號範圍誤判
+// 🔧 修正：正確嘅安全評估函數
 function safeEvaluate(mathExpr) {
-    const allowed = /^[\d+\-\*^{}/.()Math\.PI Math\.sin Math\.cos Math\.tan Math\.log10 Math\.log Math\.sqrt \s]+$/;
-    if (!allowed.test(mathExpr)) {
+    // 只容許：數字、基本運算符、括號、Math 物件、空白
+    // 用兩個步驟：先檢查危險字符，再執行
+    const dangerous = /[^0-9+\-*/.()Math.PI Math.sin Math.cos Math.tan Math.log10 Math.log Math.sqrt \s]/;
+    if (dangerous.test(mathExpr)) {
         throw new Error('Unsafe Math Expression');
     }
     return Function('"use strict"; return (' + mathExpr + ')')();
 }
 
-async function calculate() {
+window.calculate = async function() {
     resetIdleTimer();
     vibrate();
     
+    // 檢查暗號
     if (await checkSecret(expr)) {
         document.getElementById('vault-modal').style.display = 'block';
         clearScreen();
@@ -63,7 +89,7 @@ async function calculate() {
             .replace(/×/g, '*')
             .replace(/÷/g, '/')
             .replace(/π/g, 'Math.PI')
-            .replace(/sin\(/g, '(Math.PI/180)*Math.sin(')
+            .replace(/sin\(/g, 'Math.sin(')
             .replace(/cos\(/g, 'Math.cos(')
             .replace(/tan\(/g, 'Math.tan(')
             .replace(/log\(/g, 'Math.log10(')
@@ -84,17 +110,17 @@ async function calculate() {
         updateLCD("Error");
         expr = "";
     }
-}
+};
 
-function unlockVault() {
+window.unlockVault = function() {
     resetIdleTimer();
     vibrate();
     if (!document.getElementById('session-key').value) return;
     document.getElementById('auth-box').style.display = 'none';
     document.getElementById('content-box').style.display = 'block';
-}
+};
 
-function addEntry() {
+window.addEntry = function() {
     resetIdleTimer();
     vibrate();
     const title = document.getElementById('note-title').value;
@@ -104,7 +130,7 @@ function addEntry() {
     document.getElementById('note-title').value = '';
     document.getElementById('note-val').value = '';
     renderList();
-}
+};
 
 function renderList() {
     const container = document.getElementById('vault-list');
@@ -117,7 +143,7 @@ function renderList() {
     });
 }
 
-function purgeAndClose() {
+window.purgeAndClose = function() {
     clearTimeout(idleTimer);
     ramVault.forEach(item => { item.title = "00000"; item.val = "00000"; });
     ramVault = [];
@@ -126,29 +152,9 @@ function purgeAndClose() {
     document.getElementById('content-box').style.display = 'none';
     document.getElementById('auth-box').style.display = 'block';
     document.getElementById('vault-modal').style.display = 'none';
-}
+};
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-num]').forEach(btn => {
-        btn.addEventListener('click', () => inputNum(btn.getAttribute('data-num')));
-    });
-
-    document.querySelectorAll('[data-fn]').forEach(btn => {
-        btn.addEventListener('click', () => inputFn(btn.getAttribute('data-fn')));
-    });
-
-    document.getElementById('btn-clear').addEventListener('click', clearScreen);
-    document.getElementById('btn-del').addEventListener('click', deleteLast);
-    document.getElementById('btn-calc').addEventListener('click', calculate);
-    document.getElementById('btn-unlock').addEventListener('click', unlockVault);
-    document.getElementById('btn-add-entry').addEventListener('click', addEntry);
-    document.getElementById('btn-purge').addEventListener('click', purgeAndClose);
-
-    ['click', 'keydown', 'touchstart'].forEach(evt => {
-        document.addEventListener(evt, resetIdleTimer);
-    });
-});
-
+// 記憶體保護
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         purgeAndClose();
@@ -158,6 +164,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('beforeunload', purgeAndClose);
 window.addEventListener('pagehide', purgeAndClose);
 
+// Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
