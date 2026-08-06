@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Calc-OFF | 離線算籌</title>
     
-    <!-- PWA 與 App 圖示設定 -->
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
     <meta name="theme-color" content="#0f172a">
@@ -13,8 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Calc-OFF">
 
-    <!-- 最高等級 CSP：完全禁用 unsafe-inline，加入 frame-ancestors 'none' 防 Clickjacking -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
     
     <link rel="stylesheet" href="./style.css">
     <script src="./app.js" defer></script>
@@ -32,41 +30,41 @@
     </div>
 
     <div class="grid-fn">
-        <button data-fn="sin(">sin</button>
-        <button data-fn="cos(">cos</button>
-        <button data-fn="tan(">tan</button>
-        <button data-fn="log(">log</button>
-        <button data-fn="ln(">ln</button>
-        <button data-fn="(">(</button>
-        <button data-fn=")">)</button>
-        <button data-fn="^">xʸ</button>
-        <button data-fn="√(">√</button>
-        <button data-fn="π">π</button>
+        <button onclick="inputFn('sin(')">sin</button>
+        <button onclick="inputFn('cos(')">cos</button>
+        <button onclick="inputFn('tan(')">tan</button>
+        <button onclick="inputFn('log(')">log</button>
+        <button onclick="inputFn('ln(')">ln</button>
+        <button onclick="inputFn('(')">(</button>
+        <button onclick="inputFn(')')">)</button>
+        <button onclick="inputFn('^')">xʸ</button>
+        <button onclick="inputFn('√(')">√</button>
+        <button onclick="inputFn('π')">π</button>
     </div>
 
     <div class="grid-num">
-        <button class="danger" id="btn-clear">ON/C</button>
-        <button id="btn-del">DEL</button>
-        <button data-fn="÷">÷</button>
-        <button data-fn="×">×</button>
+        <button class="danger" onclick="clearScreen()">ON/C</button>
+        <button onclick="deleteLast()">DEL</button>
+        <button onclick="inputFn('÷')">÷</button>
+        <button onclick="inputFn('×')">×</button>
 
-        <button class="num" data-num="7">7</button>
-        <button class="num" data-num="8">8</button>
-        <button class="num" data-num="9">9</button>
-        <button data-fn="-">-</button>
+        <button class="num" onclick="inputNum('7')">7</button>
+        <button class="num" onclick="inputNum('8')">8</button>
+        <button class="num" onclick="inputNum('9')">9</button>
+        <button onclick="inputFn('-')">-</button>
 
-        <button class="num" data-num="4">4</button>
-        <button class="num" data-num="5">5</button>
-        <button class="num" data-num="6">6</button>
-        <button data-fn="+">+</button>
+        <button class="num" onclick="inputNum('4')">4</button>
+        <button class="num" onclick="inputNum('5')">5</button>
+        <button class="num" onclick="inputNum('6')">6</button>
+        <button onclick="inputFn('+')">+</button>
 
-        <button class="num" data-num="1">1</button>
-        <button class="num" data-num="2">2</button>
-        <button class="num" data-num="3">3</button>
-        <button class="op" id="btn-calc" style="grid-row: span 2; height: 92px;">=</button>
+        <button class="num" onclick="inputNum('1')">1</button>
+        <button class="num" onclick="inputNum('2')">2</button>
+        <button class="num" onclick="inputNum('3')">3</button>
+        <button class="op" style="grid-row: span 2; height: 92px;" onclick="calculate()">=</button>
 
-        <button class="num" data-num="0" style="grid-column: span 2;">0</button>
-        <button class="num" data-num=".">.</button>
+        <button class="num" onclick="inputNum('0')" style="grid-column: span 2;">0</button>
+        <button class="num" onclick="inputNum('.')">.</button>
     </div>
 </div>
 
@@ -76,14 +74,14 @@
         <p style="font-size:0.8rem; color:#94a3b8;">數據僅存在於 RAM 中，App 關閉、切換至背景或閒置 5 分鐘即完全銷毀。</p>
         <div id="auth-box">
             <input type="password" id="session-key" placeholder="設定當前 Session 解密密碼">
-            <button id="btn-unlock" style="width:100%; background:#38bdf8; color:#000; padding:10px; margin-top:8px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">開啟</button>
+            <button onclick="unlockVault()" style="width:100%; background:#38bdf8; color:#000; padding:10px; margin-top:8px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">開啟</button>
         </div>
         <div id="content-box" style="display:none;">
             <input type="text" id="note-title" placeholder="機密項目 (例: 臨時助記詞)">
             <input type="text" id="note-val" placeholder="敏感內容">
-            <button id="btn-add-entry" style="width:100%; background:#38bdf8; color:#000; padding:8px; margin-top:6px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">暫存於記憶體</button>
+            <button onclick="addEntry()" style="width:100%; background:#38bdf8; color:#000; padding:8px; margin-top:6px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">暫存於記憶體</button>
             <div id="vault-list" style="margin-top:15px; font-size:0.85rem;"></div>
-            <button id="btn-purge" class="danger" style="width:100%; padding:10px; margin-top:15px; border-radius:6px; cursor:pointer;">🔥 立即清空記憶體並關閉</button>
+            <button onclick="purgeAndClose()" class="danger" style="width:100%; padding:10px; margin-top:15px; border-radius:6px; cursor:pointer;">🔥 立即清空記憶體並關閉</button>
         </div>
     </div>
 </div>
