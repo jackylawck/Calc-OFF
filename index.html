@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calc-OFF | 離線算籌</title>
-    <!-- 企業級嚴格 CSP：完全禁止網絡連線，確保極致安全 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+    <title>Calc-OFF | Scientific Calculator</title>
+    <!-- 內建 SVG Favicon (無需額外圖片檔案) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+    <!-- 企業級嚴格 CSP：完全禁止網絡連線 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:;">
     <style>
         :root { 
             --bg: #0f172a; 
@@ -18,7 +20,7 @@
             --danger: #dc2626; 
         }
         body { 
-            font-family: 'Courier New', Courier, monospace; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; 
             background: var(--bg); 
             color: #fff; 
             display: flex; 
@@ -28,7 +30,6 @@
             margin: 0; 
         }
         
-        /* 通用科學計算機外殼 */
         .calculator { 
             background: var(--calc-body); 
             width: 340px; 
@@ -46,7 +47,6 @@
             font-weight: bold;
         }
         
-        /* 雙行 LCD 液晶顯示屏 */
         .lcd-screen { 
             background: var(--screen-bg); 
             color: var(--text-dark); 
@@ -54,6 +54,7 @@
             border-radius: 6px; 
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); 
             margin-bottom: 16px; 
+            font-family: 'Courier New', Courier, monospace;
             font-weight: bold; 
         }
         .lcd-history { 
@@ -70,7 +71,6 @@
             overflow: hidden; 
         }
 
-        /* 按鍵面版佈局 */
         .grid-fn { 
             display: grid; 
             grid-template-columns: repeat(5, 1fr); 
@@ -99,7 +99,6 @@
         button.danger { background: var(--danger); }
         button:active { filter: brightness(1.2); }
 
-        /* RAM 零痕跡 Session 保險箱 Panel */
         #vault-modal { 
             display: none; 
             position: fixed; 
@@ -115,7 +114,6 @@
             padding: 20px; 
             border-radius: 12px; 
             border: 1px solid #38bdf8; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
         }
         input { 
             width: 100%; 
@@ -136,13 +134,11 @@
         SCIENTIFIC CALCULATOR
     </div>
 
-    <!-- 雙行液晶顯示屏 -->
     <div class="lcd-screen">
         <div class="lcd-history" id="lcd-hist">DEG</div>
         <div class="lcd-main" id="lcd-val">0</div>
     </div>
 
-    <!-- 科學函數鍵區域 -->
     <div class="grid-fn">
         <button onclick="inputFn('sin(')">sin</button>
         <button onclick="inputFn('cos(')">cos</button>
@@ -156,7 +152,6 @@
         <button onclick="inputFn('π')">π</button>
     </div>
 
-    <!-- 數字與基礎運算鍵區域 -->
     <div class="grid-num">
         <button class="danger" onclick="clearScreen()">ON/C</button>
         <button onclick="deleteLast()">DEL</button>
@@ -183,7 +178,6 @@
     </div>
 </div>
 
-<!-- 零痕跡 Session 記憶體保險箱 Panel -->
 <div id="vault-modal">
     <div class="vault-box">
         <h3 style="color:#38bdf8; margin-top:0;">🔒 離線算籌 · RAM 保險箱</h3>
@@ -217,7 +211,7 @@
     }
 
     function calculate() {
-        // 暗號解鎖：輸入 3650 或 sin(90)+log(100) 後按 = 觸發
+        // 解鎖暗號：輸入 3650 或 sin(90)+log(100) 後按 =
         if (expr === "3650" || expr === "sin(90)+log(100)") {
             document.getElementById('vault-modal').style.display = 'block';
             clearScreen();
@@ -226,13 +220,13 @@
 
         if (!expr) return;
 
-        // 替換所有科學符號與乘除號為 JavaScript 合法語法
         try {
+            // 正確處理 × 與 ÷ 符號
             let parsed = expr
                 .replace(/×/g, '*')
                 .replace(/÷/g, '/')
                 .replace(/π/g, 'Math.PI')
-                .replace(/sin\(/g, 'Math.sin(')
+                .replace(/sin\(/g, '(Math.PI/180)*Math.sin(') // 轉為 Degree 計算
                 .replace(/cos\(/g, 'Math.cos(')
                 .replace(/tan\(/g, 'Math.tan(')
                 .replace(/log\(/g, 'Math.log10(')
@@ -243,7 +237,7 @@
             let res = Function('"use strict"; return (' + parsed + ')')();
 
             if (typeof res === 'number' && !isNaN(res)) {
-                res = Math.round(res * 1e10) / 1e10;
+                res = Math.round(res * 1e10) / 1e10; // 消除 Javascript 浮點數微小誤差
             }
 
             document.getElementById('lcd-hist').innerText = "Ans = " + expr;
@@ -280,7 +274,6 @@
     }
 
     function purgeAndClose() {
-        // 主動覆寫並銷毀 RAM 數據
         ramVault.forEach(item => { item.title = "00000"; item.val = "00000"; });
         ramVault = [];
         document.getElementById('session-key').value = '';
@@ -290,7 +283,6 @@
         document.getElementById('vault-modal').style.display = 'none';
     }
 
-    // 關閉分頁或重新整理時自動清空 RAM
     window.addEventListener('beforeunload', purgeAndClose);
     window.addEventListener('pagehide', purgeAndClose);
 </script>
