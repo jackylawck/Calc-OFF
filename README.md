@@ -1,6 +1,6 @@
 # Calc-OFF | 離線算籌
 
-> **運算於手，運籌帷幄。**  
+> **機算於手，運籌帷幄。**  
 > **Calculations in Hand. Absolute Command.**
 
 Calc-OFF 是一款輕量、純前端且支援離線執行的科學計算機 Web PWA 應用程式。專為重視計算精準度與記憶體隱私安全（Zero-Trace Privacy）的專業人士設計。
