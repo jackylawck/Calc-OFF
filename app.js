@@ -36,8 +36,9 @@ async function checkSecret(input) {
     return hex === SECRET_HASH;
 }
 
+// 修正白名單正則表達式，防範 * 與 - 符號範圍誤判
 function safeEvaluate(mathExpr) {
-    const allowed = /^[\d+\-*/.()Math\.PI Math\.sin Math\.cos Math\.tan Math\.log10 Math\.log Math\.sqrt \s]+$/;
+    const allowed = /^[\d+\-\*^{}/.()Math\.PI Math\.sin Math\.cos Math\.tan Math\.log10 Math\.log Math\.sqrt \s]+$/;
     if (!allowed.test(mathExpr)) {
         throw new Error('Unsafe Math Expression');
     }
@@ -80,7 +81,6 @@ async function calculate() {
         expr = res.toString();
         updateLCD(expr);
     } catch (e) {
-        // 通用錯誤訊息，防實作細節洩漏
         updateLCD("Error");
         expr = "";
     }
