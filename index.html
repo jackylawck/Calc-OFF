@@ -1,100 +1,38 @@
-<!DOCTYPE html>
-<html lang="zh-HK">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Calc-OFF | 離線算籌</title>
-    
-    <!-- Google Search Console 驗證中繼標記 -->
-    <meta name="google-site-verification" content="JZ5UohX-CcP_fQV0_DI9VadkKY4ZoTTkUifL88-fIcY" />
+<!-- SEO 基礎搜尋引擎優化標籤 -->
+<title>Calc-OFF | 離線算籌 - 免費極簡科學計算機 (PWA 離線工具)</title>
+<meta name="description" content="Calc-OFF（離線算籌）是一款專業、簡約且支援 100% 離線運行的 Web 科學計算機。支援三角函數、對數及複雜數學運算，純前端運算，數據不傳送至任何伺服器。A fast, privacy-focused scientific calculator PWA running 100% offline with zero data collection.">
+<meta name="keywords" content="科學計算機, 線上計算機, 離線計算機, PWA 計算機, 離線算籌, Calc-OFF, scientific calculator, offline calculator PWA">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://jackylawck.github.io/Calc-OFF/">
 
-    <!-- PWA 與 App 圖示設定 (指向新圖示檔名) -->
-    <link rel="manifest" href="./manifest.json">
-    <link rel="icon" type="image/png" sizes="192x192" href="./CalcOFFicon-192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="./CalcOFFicon-512.png">
-    
-    <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Calc-OFF">
+<!-- Open Graph (社群卡片預覽，如 WhatsApp, LinkedIn, Facebook) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Calc-OFF | 離線算籌 - 免費極簡科學計算機">
+<meta property="og:description" content="運算於手，運籌帷幄。支援完整科學運算與 100% 離線運行的 PWA 工具。">
+<meta property="og:url" content="https://jackylawck.github.io/Calc-OFF/">
+<meta property="og:image" content="https://jackylawck.github.io/Calc-OFF/CalcOFFicon-512.png">
 
-    <!-- 企業級 CSP：允許本地腳本、樣式與數學表達式 Function() 執行 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none';">
-    
-    <link rel="stylesheet" href="./style.css">
-    <script src="./app.js?v=11" defer></script>
-</head>
-<body>
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Calc-OFF | Offline Scientific Calculator">
+<meta name="twitter:description" content="A fast, privacy-focused scientific calculator PWA. Fully functional offline.">
+<meta name="twitter:image" content="https://jackylawck.github.io/Calc-OFF/CalcOFFicon-512.png">
 
-<div class="calculator">
-    <div class="brand-header">
-        SCIENTIFIC CALCULATOR
-    </div>
-
-    <div class="lcd-screen">
-        <div class="lcd-history" id="lcd-hist">DEG</div>
-        <div class="lcd-main" id="lcd-val">0</div>
-    </div>
-
-    <!-- 科學函數按鈕區 (包含 (-) 負數按鈕) -->
-    <div class="grid-fn">
-        <button onclick="inputFn('sin(')">sin</button>
-        <button onclick="inputFn('cos(')">cos</button>
-        <button onclick="inputFn('tan(')">tan</button>
-        <button onclick="inputFn('log(')">log</button>
-        <button onclick="inputFn('ln(')">ln</button>
-        <button onclick="inputFn('(')">(</button>
-        <button onclick="inputFn(')')">)</button>
-        <button onclick="inputFn('^')">xʸ</button>
-        <button onclick="inputFn('√(')">√</button>
-        <button onclick="inputFn('-')">(-)</button>
-    </div>
-
-    <!-- 數字與基礎運算按鈕區 -->
-    <div class="grid-num">
-        <button class="danger" onclick="clearScreen()">ON/C</button>
-        <button onclick="deleteLast()">DEL</button>
-        <button onclick="inputFn('÷')">÷</button>
-        <button onclick="inputFn('×')">×</button>
-
-        <button class="num" onclick="inputNum('7')">7</button>
-        <button class="num" onclick="inputNum('8')">8</button>
-        <button class="num" onclick="inputNum('9')">9</button>
-        <button onclick="inputFn('-')">-</button>
-
-        <button class="num" onclick="inputNum('4')">4</button>
-        <button class="num" onclick="inputNum('5')">5</button>
-        <button class="num" onclick="inputNum('6')">6</button>
-        <button onclick="inputFn('+')">+</button>
-
-        <button class="num" onclick="inputNum('1')">1</button>
-        <button class="num" onclick="inputNum('2')">2</button>
-        <button class="num" onclick="inputNum('3')">3</button>
-        <button class="op" style="grid-row: span 2; height: 92px;" onclick="calculate()">=</button>
-
-        <button class="num" onclick="inputNum('0')" style="grid-column: span 2;">0</button>
-        <button class="num" onclick="inputNum('.')">.</button>
-    </div>
-</div>
-
-<!-- RAM 零痕跡 Session 保險箱 Modal -->
-<div id="vault-modal">
-    <div class="vault-box">
-        <h3 style="color:#38bdf8; margin-top:0;">🔒 離線算籌 · RAM 保險箱</h3>
-        <p style="font-size:0.8rem; color:#94a3b8;">數據僅存在於 RAM 中，App 關閉、切換至背景或閒置 5 分鐘即完全銷毀。</p>
-        <div id="auth-box">
-            <input type="password" id="session-key" placeholder="設定當前 Session 解密密碼">
-            <button onclick="unlockVault()" style="width:100%; background:#38bdf8; color:#000; padding:10px; margin-top:8px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">開啟</button>
-        </div>
-        <div id="content-box" style="display:none;">
-            <input type="text" id="note-title" placeholder="機密項目 (例: 臨時助記詞)">
-            <input type="text" id="note-val" placeholder="敏感內容">
-            <button onclick="addEntry()" style="width:100%; background:#38bdf8; color:#000; padding:8px; margin-top:6px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">暫存於記憶體</button>
-            <div id="vault-list" style="margin-top:15px; font-size:0.85rem;"></div>
-            <button onclick="purgeAndClose()" class="danger" style="width:100%; padding:10px; margin-top:15px; border-radius:6px; cursor:pointer;">🔥 立即清空記憶體並關閉</button>
-        </div>
-    </div>
-</div>
-
-</body>
-</html>
+<!-- Google Rich Snippet (結構化資料，讓 Google 識別為 Web 應用程式) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Calc-OFF 離線算籌",
+  "url": "https://jackylawck.github.io/Calc-OFF/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "All",
+  "browserRequirements": "Requires JavaScript",
+  "description": "A sleek, privacy-focused scientific calculator PWA that runs completely offline in your browser.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "HKD"
+  }
+}
+</script>
